@@ -47,6 +47,16 @@
     --selected-matrix-timeslot-border: #555;
 }
 
+[type=checkbox]:checked,
+[type=checkbox]:checked:active,
+[type=checkbox]:checked:focus,
+[type=radio]:checked,
+[type=radio]:checked:active,
+[type=radio]:checked:focus {
+    --pico-background-color: var(--primary-color);
+    --pico-border-color: var(--primary-color);
+}
+
 html {
     background-color: var(--bg-color);
 }
@@ -520,13 +530,18 @@ button.margin-0 {
 
 /* Time Pills (Input UI) */
 .time-pill {
+    --pico-background-color: var(--pico-form-element-background-color);
+    --pico-border-color: var(--pico-form-element-border-color);
+    --pico-color: var(--pico-form-element-color);
+    background: var(--pico-form-element-background-color);
+    border: 1px solid var(--pico-border-color);
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.6rem 0.8rem;
     /* Tighter */
-    background: var(--matrix-bg);
-    border: 1px solid var(--muted-border-color);
+    /* background: var(--matrix-bg);
+    border: 1px solid var(--muted-border-color); */
     border-radius: var(--border-radius);
     transition: all 0.2s ease;
     font-weight: 600;
@@ -1516,6 +1531,11 @@ main>article>header {
     flex-direction: column;
     gap: 1rem;
     width: 100%;
+}
+
+.checkbox-label {
+    font-weight: normal;
+    margin-bottom: var(--pico-spacing);
 }
 
 .grid-toolbar {
