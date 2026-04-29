@@ -35,7 +35,7 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
                 <div id="notifications-group" style="display: none; margin-top: 2rem;">
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input type="checkbox" id="enable-notifications" name="enable-notifications">
-                        Get notified when people respond to this poll
+                        Get notified when people respond
                     </label>
                 </div>
             </section>
@@ -159,7 +159,7 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
                     });
 
                     if (!res.ok) throw new Error('Failed to save subscription on server');
-                    
+
                     e.target.nextSibling.textContent = ' Notifications enabled';
                 } catch (err) {
                     console.error('Push subscription failed:', err);

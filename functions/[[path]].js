@@ -261,10 +261,56 @@ api.post('/polls/:id/vote', async (c) => {
                             pollId: pollId
                         });
 
-                        const applicationServerKeys = ApplicationServerKeys.fromJSON({
-                            publicKey: c.env.VAPID_PUBLIC_KEY,
-                            privateKey: c.env.VAPID_PRIVATE_KEY
-                        });
+                        // Helper functions for base64url encoding/decoding
+                        const decodeBase64URL = (str) => {
+                            const padding = '='.repeat((4 - str.length % 4) % 4);
+                            const base64 = (str + padding).replace(/-/g, '+').replace(/_/g, '/');
+                            const rawData = atob(base64);
+                            const outputArray = new Uint8Array(rawData.length);
+                            for (let i = 0; i < rawData.length; ++i) {
+                                outputArray[i] = rawData.charCodeAt(i);
+                            }
+                            return outputArray;
+                        };
+
+                        const encodeBase64URL = (buffer) => {
+                            const bytes = new Uint8Array(buffer);
+                            let str = '';
+                            for (let i = 0; i < bytes.length; i++) {
+                                str += String.fromCharCode(bytes[i]);
+                            }
+                            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+                        };
+
+                        const pubBytes = decodeBase64URL(c.env.VAPID_PUBLIC_KEY);
+                        const privBytes = decodeBase64URL(c.env.VAPID_PRIVATE_KEY);
+
+                        const publicKey = await crypto.subtle.importKey(
+                            "raw",
+                            pubBytes,
+                            { name: "ECDSA", namedCurve: "P-256" },
+                            true,
+                            []
+                        );
+
+                        const jwk = {
+                            kty: "EC",
+                            crv: "P-256",
+                            x: encodeBase64URL(pubBytes.slice(1, 33)),
+                            y: encodeBase64URL(pubBytes.slice(33, 65)),
+                            d: encodeBase64URL(privBytes),
+                            ext: true
+                        };
+
+                        const privateKey = await crypto.subtle.importKey(
+                            "jwk",
+                            jwk,
+                            { name: "ECDSA", namedCurve: "P-256" },
+                            true,
+                            ["sign"]
+                        );
+
+                        const applicationServerKeys = { publicKey, privateKey };
 
                         const promises = subscriptions.results.map(async sub => {
                             try {
@@ -278,7 +324,7 @@ api.post('/polls/:id/vote', async (c) => {
                                             auth: sub.auth
                                         }
                                     },
-                                    adminContact: `admin@${new URL(c.req.url).hostname}`
+                                    adminContact: `mailto:admin@${new URL(c.req.url).hostname}`
                                 });
 
                                 const res = await fetch(endpoint, {
