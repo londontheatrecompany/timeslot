@@ -248,6 +248,8 @@ api.post('/polls/:id/vote', async (c) => {
 
         await db.batch(statements);
 
+        const requestHostname = new URL(c.req.url).hostname;
+
         // --- Push Notification Logic ---
         if (c.env.VAPID_PUBLIC_KEY && c.env.VAPID_PRIVATE_KEY) {
             c.executionCtx.waitUntil((async () => {
@@ -282,8 +284,8 @@ api.post('/polls/:id/vote', async (c) => {
                             return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
                         };
 
-                        const pubBytes = decodeBase64URL(c.env.VAPID_PUBLIC_KEY);
-                        const privBytes = decodeBase64URL(c.env.VAPID_PRIVATE_KEY);
+                        const pubBytes = decodeBase64URL(c.env.VAPID_PUBLIC_KEY.trim());
+                        const privBytes = decodeBase64URL(c.env.VAPID_PRIVATE_KEY.trim());
 
                         const publicKey = await crypto.subtle.importKey(
                             "raw",
@@ -324,7 +326,7 @@ api.post('/polls/:id/vote', async (c) => {
                                             auth: sub.auth
                                         }
                                     },
-                                    adminContact: `mailto:admin@${new URL(c.req.url).hostname}`
+                                    adminContact: `mailto:admin@${requestHostname}`
                                 });
 
                                 const res = await fetch(endpoint, {
