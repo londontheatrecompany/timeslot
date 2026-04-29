@@ -125,10 +125,28 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
                         applicationServerKey[i] = rawData.charCodeAt(i);
                     }
 
-                    const subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey
-                    });
+                    let subscription;
+                    try {
+                        subscription = await registration.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey
+                        });
+                    } catch (subErr) {
+                        if (subErr.name === 'InvalidStateError') {
+                            console.warn('VAPID key changed. Unsubscribing from old key...');
+                            const oldSub = await registration.pushManager.getSubscription();
+                            if (oldSub) {
+                                await oldSub.unsubscribe();
+                            }
+                            // Retry subscription
+                            subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey
+                            });
+                        } else {
+                            throw subErr;
+                        }
+                    }
 
                     // Send subscription to backend
                     const res = await fetch('/api/push/subscribe', {
