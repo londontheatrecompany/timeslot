@@ -99,7 +99,6 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
             if (e.target.checked) {
                 const originalText = e.target.nextSibling.textContent;
                 e.target.nextSibling.textContent = ' Enabling...';
-                e.target.disabled = true;
 
                 try {
                     const permission = await Notification.requestPermission();
@@ -164,9 +163,33 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
                 } catch (err) {
                     console.error('Push subscription failed:', err);
                     e.target.checked = false;
-                    e.target.disabled = false;
                     e.target.nextSibling.textContent = originalText;
                     window.showToast("Failed to enable notifications. " + (err.message || ''));
+                }
+            } else {
+                const originalText = e.target.nextSibling.textContent;
+                e.target.nextSibling.textContent = ' Disabling...';
+
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const subscription = await registration.pushManager.getSubscription();
+                    if (subscription) {
+                        const res = await fetch('/api/push/unsubscribe', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                poll_id: pollId,
+                                endpoint: subscription.endpoint
+                            })
+                        });
+                        if (!res.ok) throw new Error('Failed to remove subscription on server');
+                    }
+                    e.target.nextSibling.textContent = ' Get notified when people respond';
+                } catch (err) {
+                    console.error('Push unsubscription failed:', err);
+                    e.target.checked = true; // Re-check if failed
+                    e.target.nextSibling.textContent = originalText;
+                    window.showToast("Failed to disable notifications.");
                 }
             }
         });

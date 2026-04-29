@@ -453,6 +453,30 @@ api.post('/push/subscribe', async (c) => {
     }
 });
 
+/**
+ * DELETE /api/push/unsubscribe
+ * Unsubscribe from Web Push notifications for a specific poll
+ */
+api.delete('/push/unsubscribe', async (c) => {
+    const { poll_id, endpoint } = await c.req.json();
+    const db = c.env.DB;
+
+    if (!poll_id || !endpoint) {
+        return c.json({ error: 'Invalid unsubscribe data' }, 400);
+    }
+
+    try {
+        await db.prepare('DELETE FROM push_subscriptions WHERE poll_id = ? AND endpoint = ?')
+            .bind(poll_id, endpoint)
+            .run();
+        
+        return c.json({ success: true }, 200);
+    } catch (err) {
+        console.error('Failed to remove subscription:', err);
+        return c.json({ error: 'Failed to remove subscription' }, 500);
+    }
+});
+
 app.route('/', api);
 
 export const onRequest = handle(app);
