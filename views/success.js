@@ -80,7 +80,7 @@ export async function renderSuccessView(container, pollId, editToken, isEdit = f
     const enableNotifications = container.querySelector('#enable-notifications');
 
     if (isPushSupported && !isEdit) {
-        notificationsGroup.style.display = 'block';
+        // notificationsGroup.style.display = 'block';
 
         // Check if already subscribed for this browser
         navigator.serviceWorker.getRegistration().then(reg => {
