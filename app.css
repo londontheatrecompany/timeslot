@@ -1534,7 +1534,6 @@ main>article>header {
 }
 
 .checkbox-label {
-    font-weight: normal;
     margin-bottom: var(--pico-spacing);
 }
 

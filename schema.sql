@@ -38,3 +38,13 @@ CREATE TABLE votes (
     FOREIGN KEY(response_id) REFERENCES responses(id) ON DELETE CASCADE,
     FOREIGN KEY(option_id) REFERENCES poll_options(id) ON DELETE CASCADE
 );
+
+-- Push Subscriptions: Endpoints for Web Push notifications.
+CREATE TABLE push_subscriptions (
+    id TEXT PRIMARY KEY,
+    poll_id TEXT NOT NULL,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    FOREIGN KEY(poll_id) REFERENCES polls(id) ON DELETE CASCADE
+);

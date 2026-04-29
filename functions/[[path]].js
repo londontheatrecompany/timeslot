@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/cloudflare-pages';
 import { nanoid } from 'nanoid';
+import { ApplicationServerKeys, generatePushHTTPRequest } from 'webpush-webcrypto';
 
 const app = new Hono();
 
@@ -230,6 +231,9 @@ api.post('/polls/:id/vote', async (c) => {
     const editToken = `e_${nanoid(32)}`; // Longer for security
 
     try {
+        // Fetch poll details for the notification
+        const poll = await db.prepare('SELECT title FROM polls WHERE id = ?').bind(pollId).first();
+
         const statements = [
             db.prepare('INSERT INTO responses (id, poll_id, voter_name, edit_token) VALUES (?, ?, ?, ?)')
               .bind(responseId, pollId, voter_name, editToken)
@@ -243,6 +247,62 @@ api.post('/polls/:id/vote', async (c) => {
         }
 
         await db.batch(statements);
+
+        // --- Push Notification Logic ---
+        if (c.env.VAPID_PUBLIC_KEY && c.env.VAPID_PRIVATE_KEY) {
+            c.executionCtx.waitUntil((async () => {
+                try {
+                    const subscriptions = await db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE poll_id = ?').bind(pollId).all();
+                    
+                    if (subscriptions && subscriptions.results && subscriptions.results.length > 0) {
+                        const payload = JSON.stringify({
+                            title: 'New Response',
+                            body: `Someone just updated their availability for ${poll?.title || 'your poll'}`,
+                            pollId: pollId
+                        });
+
+                        const applicationServerKeys = ApplicationServerKeys.fromJSON({
+                            publicKey: c.env.VAPID_PUBLIC_KEY,
+                            privateKey: c.env.VAPID_PRIVATE_KEY
+                        });
+
+                        const promises = subscriptions.results.map(async sub => {
+                            try {
+                                const { headers, body, endpoint } = await generatePushHTTPRequest({
+                                    applicationServerKeys,
+                                    payload,
+                                    target: {
+                                        endpoint: sub.endpoint,
+                                        keys: {
+                                            p256dh: sub.p256dh,
+                                            auth: sub.auth
+                                        }
+                                    },
+                                    adminContact: `admin@${new URL(c.req.url).hostname}`
+                                });
+
+                                const res = await fetch(endpoint, {
+                                    method: 'POST',
+                                    headers,
+                                    body
+                                });
+
+                                if (!res.ok) {
+                                    console.error('Push error for endpoint', sub.endpoint, res.status, await res.text());
+                                }
+                            } catch (err) {
+                                console.error('Failed to generate push request:', err);
+                            }
+                        });
+
+                        await Promise.allSettled(promises);
+                    }
+                } catch (pushErr) {
+                    console.error('Push notification background task failed:', pushErr);
+                }
+            })());
+        }
+        
         return c.json({ response_id: responseId, edit_token: editToken }, 201);
     } catch (e) {
         console.error(e);
@@ -309,6 +369,41 @@ api.put('/polls/:id/response/:editToken', async (c) => {
     } catch (e) {
         console.error(e);
         return c.json({ error: 'Failed to update response' }, 500);
+    }
+});
+
+
+
+/**
+ * GET /api/push/public-key
+ * Returns the VAPID public key for frontend subscription
+ */
+api.get('/push/public-key', (c) => {
+    return c.json({ key: c.env.VAPID_PUBLIC_KEY });
+});
+
+/**
+ * POST /api/push/subscribe
+ * Subscribe to Web Push notifications for a specific poll
+ */
+api.post('/push/subscribe', async (c) => {
+    const { poll_id, subscription } = await c.req.json();
+    const db = c.env.DB;
+
+    if (!poll_id || !subscription || !subscription.endpoint || !subscription.keys) {
+        return c.json({ error: 'Invalid subscription data' }, 400);
+    }
+
+    const subId = `sub_${nanoid(16)}`;
+    try {
+        await db.prepare('INSERT INTO push_subscriptions (id, poll_id, endpoint, p256dh, auth) VALUES (?, ?, ?, ?, ?)')
+            .bind(subId, poll_id, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth)
+            .run();
+        
+        return c.json({ success: true, id: subId }, 201);
+    } catch (err) {
+        console.error('Failed to save subscription:', err);
+        return c.json({ error: 'Failed to save subscription' }, 500);
     }
 });
 
