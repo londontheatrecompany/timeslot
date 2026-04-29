@@ -36,7 +36,7 @@
     --text-main: #f8fafc;
     --muted-color: #94a3b8;
     --muted-border-color: rgba(255, 255, 255, 0.08);
-    --highlight-color: rgba(255, 255, 255, 0.1);
+    --highlight-color: rgba(255, 255, 255, 0.05);
     --conflict-bg: rgba(239, 68, 68, 0.2);
     --conflict-text: #fca5a5;
     --tab-active-bg: #f8fafc;
@@ -559,8 +559,8 @@ button.margin-0 {
 }
 
 .time-pill:hover {
-    border-color: var(--primary-color);
     transform: translateY(-1px);
+    background: var(--highlight-color);
 }
 
 .time-pill[data-status="1"] {
