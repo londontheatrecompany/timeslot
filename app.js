@@ -127,11 +127,12 @@ async function router() {
         } else if (path === '/create') {
             await renderCreateView(app);
         } else if (path === '/') {
-            await renderLandingView(app);
+            history.replaceState(null, '', '/create');
+            await renderCreateView(app);
         } else {
-            // Fallback to landing if path unknown
-            history.replaceState(null, '', '/');
-            await renderLandingView(app);
+            // Fallback to create if path unknown
+            history.replaceState(null, '', '/create');
+            await renderCreateView(app);
         }
     } catch (err) {
         console.error(err);
