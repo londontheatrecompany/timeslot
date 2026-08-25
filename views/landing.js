@@ -3,6 +3,8 @@
  */
 
 export function renderLandingView(container) {
+    window.location.replace("https://timeslot.ltc1.uk/create");
+    /**
     container.innerHTML = `
         <article class="fade-in landing-hero">
             <div class="hero-content">
@@ -17,4 +19,5 @@ export function renderLandingView(container) {
             </div>
         </article>
     `;
+    */
 }
