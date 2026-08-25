@@ -127,12 +127,11 @@ async function router() {
         } else if (path === '/create') {
             await renderCreateView(app);
         } else if (path === '/') {
-            history.replaceState(null, '', '/create');
-            await renderCreateView(app);
+            await renderLandingView(app);
         } else {
-            // Fallback to create if path unknown
-            history.replaceState(null, '', '/create');
-            await renderCreateView(app);
+            // Fallback to landing if path unknown
+            history.replaceState(null, '', '/');
+            await renderLandingView(app);
         }
     } catch (err) {
         console.error(err);
@@ -428,4 +427,3 @@ updateThemeToggleLabel(document.documentElement.getAttribute('data-theme'));
 
 // Initial route
 router();
-
